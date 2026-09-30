@@ -1,0 +1,37 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Render reads this file from the ROOT of the repository.
+# Because of "rootDir: server" only the three small server packages are
+# installed (seconds, not the whole Expo dependency tree).
+#
+# Deploy:  Render dashboard -> New -> Blueprint -> pick this repository.
+#          Render will ask for OPENAI_API_KEY (sync: false = you type it in).
+
+services:
+  - type: web
+    name: sanskrit-translator-api
+    runtime: node
+    # free  = 512 MB, sleeps after 15 minutes of no traffic (first request is slower)
+    # starter = always on, no sleeping — better for real use
+    plan: free
+    # Nearest Render region to India. Others: oregon, ohio, virginia, frankfurt.
+    region: singapore
+    rootDir: server
+    buildCommand: npm install --omit=dev
+    startCommand: node index.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false # Render will ask you to paste the key on first deploy
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: OPENAI_VISION_MODEL
+        value: gpt-4o
+      # Raise this for a paid instance (the limit is per IP, per minute).
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "40"

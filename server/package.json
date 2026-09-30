@@ -1,0 +1,19 @@
+{
+  "name": "sanskrit-translator-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure proxy for the Sanskrit Translator app. Holds the AI provider key.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node smoke-test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1"
+  }
+}

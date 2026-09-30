@@ -1,0 +1,97 @@
+/**
+ * Local backend proxy.
+ *
+ *   npm run server          ->  http://localhost:3001
+ *
+ * The mobile app only ever talks to this server. The AI provider key stays
+ * here, in the environment.
+ */
+
+const express = require('express');
+const cors = require('cors');
+
+const config = require('./config');
+const cache = require('./cache');
+const { handleTranslate, handleOcr } = require('./handlers');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: '12mb' }));
+
+// ---------------------------------------------------------------- rate limit
+const buckets = new Map();
+
+function rateLimit(req, res, next) {
+  const key = req.ip || 'unknown';
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || now - bucket.start > 60_000) {
+    buckets.set(key, { start: now, count: 1 });
+    return next();
+  }
+
+  bucket.count += 1;
+  if (bucket.count > config.RATE_LIMIT_PER_MINUTE) {
+    return res.status(429).json({ code: 'too_many', error: 'Too many requests.' });
+  }
+
+  // Keep the map small.
+  if (buckets.size > 5000) buckets.clear();
+  return next();
+}
+
+// --------------------------------------------------------------------- routes
+app.get('/api/health', (_req, res) => {
+  res.json({
+    ok: true,
+    model: config.OPENAI_MODEL,
+    visionModel: config.OPENAI_VISION_MODEL,
+    apiKeyConfigured: Boolean(config.OPENAI_API_KEY),
+    cachedTranslations: cache.size,
+  });
+});
+
+app.post('/api/translate', rateLimit, async (req, res) => {
+  const { status, body } = await handleTranslate(req.body);
+  res.status(status).json(body);
+});
+
+app.post('/api/ocr', rateLimit, async (req, res) => {
+  const { status, body } = await handleOcr(req.body);
+  res.status(status).json(body);
+});
+
+app.use((_req, res) => {
+  res.status(404).json({ code: 'unknown', error: 'Not found.' });
+});
+
+// eslint-disable-next-line no-unused-vars
+app.use((error, _req, res, _next) => {
+  if (error && error.type === 'entity.too.large') {
+    return res.status(400).json({ code: 'unclear', error: 'The photo is too large.' });
+  }
+  res.status(500).json({ code: 'server', error: 'Unexpected server error.' });
+});
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const server = app.listen(config.PORT, '0.0.0.0', () => {
+  const keyState = config.OPENAI_API_KEY ? 'found' : 'MISSING';
+  const hasEnvFile = fs.existsSync(path.join(__dirname, '.env'));
+  /* eslint-disable no-console */
+  console.log(`Sanskrit Translator API on http://localhost:${config.PORT}`);
+  console.log(`Text model : ${config.OPENAI_MODEL}`);
+  console.log(`Vision     : ${config.OPENAI_VISION_MODEL}`);
+  console.log(`API key    : ${keyState} (${hasEnvFile ? 'from server/.env' : 'from environment'})`);
+  if (!config.OPENAI_API_KEY) {
+    console.log('The app will show "The translator is not set up yet" until this is fixed.');
+  }
+  /* eslint-enable no-console */
+});
+
+process.on('SIGINT', () => server.close(() => process.exit(0)));
+
+module.exports = app;

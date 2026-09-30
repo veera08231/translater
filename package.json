@@ -1,0 +1,50 @@
+{
+  "name": "sanskrit-translator",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "server": "node server/index.js",
+    "dev": "node server/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node server/smoke-test.js",
+    "lint": "expo lint",
+    "build:apk": "eas build -p android --profile preview",
+    "build:dev": "eas build -p android --profile development",
+    "build:release": "eas build -p android --profile production",
+    "login:eas": "eas login",
+    "configure:android": "eas build:configure:android"
+  },
+  "dependencies": {
+    "@expo-google-fonts/noto-sans-devanagari": "^0.4.1",
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-async-storage/async-storage": "3.1.1",
+    "expo": "~57.0.26",
+    "expo-camera": "~57.0.6",
+    "expo-clipboard": "~57.0.2",
+    "expo-haptics": "~57.0.3",
+    "expo-image-picker": "~57.0.20",
+    "expo-router": "~57.0.24",
+    "expo-speech": "~57.0.3",
+    "expo-constants": "~57.0.20",
+    "expo-linking": "~57.0.11",
+    "expo-status-bar": "~57.0.1",
+    "expo-splash-screen": "~57.0.9",
+    "expo-system-ui": "~57.0.4",
+    "expo-font": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1"
+  }
+}

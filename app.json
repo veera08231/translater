@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Sanskrit Translator",
+    "slug": "sanskrit-translator",
+    "scheme": "sanskrittranslator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "primaryColor": "#5B21B6",
+    "backgroundColor": "#FFFFFF",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.sanskrittranslator",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need your camera to read text so we can translate it into Sanskrit.",
+        "NSPhotoLibraryUsageDescription": "We need your photos to read text so we can translate it into Sanskrit."
+      }
+    },
+    "android": {
+      "package": "com.example.sanskrittranslator",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#5B21B6",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "We need your camera to read text so we can translate it into Sanskrit.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "We need your photos to read text so we can translate it into Sanskrit."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#5B21B6",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

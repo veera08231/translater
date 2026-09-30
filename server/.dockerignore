@@ -1,0 +1,8 @@
+# Never copy local installs or secrets into the image.
+node_modules
+npm-debug.log
+*.log
+
+# The API key must never end up inside an image.
+.env
+.env.*
