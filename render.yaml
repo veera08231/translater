@@ -1,11 +1,10 @@
 # Render blueprint — https://render.com/docs/blueprint-spec
 #
-# Render reads this file from the ROOT of the repository.
-# Because of "rootDir: server" only the three small server packages are
-# installed (seconds, not the whole Expo dependency tree).
+# No API key is needed: the service ships with its own Sanskrit dictionary.
+# Deploy with zero configuration:  Render -> New -> Blueprint -> this repo -> Apply.
 #
-# Deploy:  Render dashboard -> New -> Blueprint -> pick this repository.
-#          Render will ask for OPENAI_API_KEY (sync: false = you type it in).
+# Later, if you ever add OPENAI_API_KEY in the Render dashboard, the app
+# automatically switches to the AI model AND turns on photo reading.
 
 services:
   - type: web
@@ -26,12 +25,11 @@ services:
         value: "22"
       - key: NODE_ENV
         value: production
-      - key: OPENAI_API_KEY
-        sync: false # Render will ask you to paste the key on first deploy
-      - key: OPENAI_MODEL
-        value: gpt-4o
-      - key: OPENAI_VISION_MODEL
-        value: gpt-4o
-      # Raise this for a paid instance (the limit is per IP, per minute).
+      # The bundled dictionary: no key, no cost.
+      - key: TRANSLATE_ENGINE
+        value: free
+      # "auto" = photo reading switches on only if you add OPENAI_API_KEY here.
+      - key: OCR_ENGINE
+        value: auto
       - key: RATE_LIMIT_PER_MINUTE
         value: "40"

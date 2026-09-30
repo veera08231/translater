@@ -53,7 +53,13 @@ export function ResultCard({ result }: Props) {
         <View style={styles.note}>
           <NoticeBanner
             tone="warning"
-            message="Please double-check this translation"
+            message={
+              result.engine === 'free'
+                ? 'Word-by-word translation — please double-check this'
+                : result.engine === 'web'
+                  ? 'From a free online service — please double-check this'
+                  : 'Please double-check this translation'
+            }
             icon="alert-circle-outline"
           />
         </View>

@@ -38,6 +38,36 @@ export async function warmUp(): Promise<void> {
   }
 }
 
+/** What the backend can do. The app uses this to stay honest. */
+export type BackendInfo = {
+  ok: boolean;
+  translateEngine: 'free' | 'llm';
+  /** null = still checking. */
+  ocrAvailable: boolean | null;
+  apiKeyConfigured?: boolean;
+};
+
+/**
+ * Asks the backend what it can do (free / photo reading), so the app never
+ * offers a button that cannot work. Fails silently when offline.
+ */
+export async function getHealth(): Promise<BackendInfo> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const response = await fetch(`${API_BASE_URL}/api/health`, {
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
+
+    if (!response.ok) throw new Error('offline');
+    return (await response.json()) as BackendInfo;
+  } catch {
+    // Assume nothing is available until the backend says otherwise, so the app
+    // never offers a button that cannot work.
+    return { ok: false, translateEngine: 'free', ocrAvailable: false };
+  }
+}
+
 export async function postJson<T>(
   path: string,
   body: unknown,

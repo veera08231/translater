@@ -13,6 +13,7 @@ const cors = require('cors');
 const config = require('./config');
 const cache = require('./cache');
 const { handleTranslate, handleOcr } = require('./handlers');
+const { ocrAvailable, activeTranslateEngine } = require('./engines');
 
 const app = express();
 
@@ -46,6 +47,9 @@ function rateLimit(req, res, next) {
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
+    // What the app uses to decide whether the Scan tab can read photos.
+    translateEngine: activeTranslateEngine(),
+    ocrAvailable: ocrAvailable(),
     model: config.OPENAI_MODEL,
     visionModel: config.OPENAI_VISION_MODEL,
     apiKeyConfigured: Boolean(config.OPENAI_API_KEY),
@@ -79,16 +83,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const server = app.listen(config.PORT, '0.0.0.0', () => {
-  const keyState = config.OPENAI_API_KEY ? 'found' : 'MISSING';
+  const keyState = config.OPENAI_API_KEY ? 'found' : 'not set';
   const hasEnvFile = fs.existsSync(path.join(__dirname, '.env'));
   /* eslint-disable no-console */
   console.log(`Sanskrit Translator API on http://localhost:${config.PORT}`);
-  console.log(`Text model : ${config.OPENAI_MODEL}`);
-  console.log(`Vision     : ${config.OPENAI_VISION_MODEL}`);
-  console.log(`API key    : ${keyState} (${hasEnvFile ? 'from server/.env' : 'from environment'})`);
-  if (!config.OPENAI_API_KEY) {
-    console.log('The app will show "The translator is not set up yet" until this is fixed.');
-  }
+  console.log(`Translating with : ${activeTranslateEngine() === 'free' ? 'free dictionary (no key, no cost)' : config.OPENAI_MODEL}`);
+  console.log(`Photo text       : ${ocrAvailable() ? `yes (${config.OPENAI_VISION_MODEL})` : 'no — the app will ask the user to type'}`);
+  console.log(`API key          : ${keyState}${hasEnvFile ? ' (from server/.env)' : ''}`);
   /* eslint-enable no-console */
 });
 

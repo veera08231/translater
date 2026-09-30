@@ -19,6 +19,8 @@ type TranslateResponse = {
   detectedCode: string;
   verified: boolean;
   backTranslation?: string;
+  engine?: 'free' | 'llm';
+  coverage?: number;
   cached?: boolean;
 };
 
@@ -48,6 +50,8 @@ export async function translateText(
     detectedCode: data.detectedCode,
     verified: data.verified,
     backTranslation: data.backTranslation,
+    engine: data.engine,
+    coverage: data.coverage,
   };
 
   await writeCachedTranslation(entry);

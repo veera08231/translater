@@ -1,12 +1,47 @@
 # Sanskrit Translator
 
-Any language → classical Sanskrit, in Devanagari.
-
-Three screens, one button each, big text. Nothing to learn.
+**Any language → Sanskrit, for free. No API key, no account, no monthly bill.**
 
 | Type | Scan | History |
 | ---- | ---- | ------- |
 | Type or paste text in any language | Point the camera at text | Every translation you made |
+
+Three screens, one button each, big text. Nothing to learn.
+
+---
+
+## How the free translation works
+
+There is no AI key, so the server translates in three steps, cheapest first:
+
+```
+your text
+   │
+   1. OUR SANSKRIT DICTIONARY  (server/engines/lexicon.js)
+   │    ~2,100 entries: English + Tamil, Telugu, Kannada, Bengali, Gujarati,
+   │    Malayalam, Hindi and romanised spellings ("paani", "thanni")
+   │    • phrases first      "thank you" → धन्यवादः
+   │    • verbs conjugated   "I go"      → अहं गच्छामि   (not गच्छति)
+   │    • numbers written    "4 people"  → चत्वारि जनाः
+   │    • words Sanskrit does not need (the, a, of) are dropped, not faked
+   │    Words it does not know are passed through unchanged — it never invents one.
+   │
+   2. FREE ONLINE SERVICES  (server/engines/webEngine.js)
+   │    only when step 1 knows less than 60% of the sentence
+   │    • source → English (Google's public endpoint, then MyMemory)
+   │    • English → Sanskrit with our own dictionary  ← best classical quality
+   │    • if that is still weak: source → Sanskrit directly
+   │    No key, no account. A result that is not Devanagari is thrown away.
+   │
+   3. AI MODEL  (optional)
+        only if you add OPENAI_API_KEY one day — best grammar, and it
+        verifies itself by back-translating
+```
+
+Tested working for English, Tamil, Hindi, Telugu, Kannada, Bengali, Gujarati,
+Malayalam, French, German, Spanish, Portuguese, Italian, Dutch, Turkish,
+Vietnamese, Indonesian, Polish, Russian, Japanese, Chinese, Korean, Arabic,
+Thai, and romanised spellings of the Indian languages.
 
 ---
 
@@ -16,64 +51,19 @@ Three screens, one button each, big text. Nothing to learn.
 | --- | --- |
 | **Node.js** | 20.19+ or 22.13+ ([nodejs.org](https://nodejs.org)) |
 | **Expo Go** | On your phone ([expo.dev/go](https://expo.dev/go)) — Android or iOS |
-| **An AI provider key** | An OpenAI API key (only needed on your computer / server) |
-| **EAS account** | Only if you want an APK file (`npx eas-cli login`) |
 
-> The AI key never goes into the app. The app talks to a small backend on your
-> computer, and the backend talks to the AI provider.
+That is all. **No API key.**
 
 ---
 
-## 2. Install
+## 2. Install and run (two terminals)
 
 ```bash
 cd "d:/sanskrit app"
 npm install
 ```
 
----
-
-## 3. Set up the two `.env` files
-
-### a) Backend key (this one is secret)
-
-```bash
-copy server\.env.example server\.env      # Windows
-# cp server/.env.example server/.env       # macOS / Linux
-```
-
-Open `server/.env` and put your key in:
-
-```env
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
-OPENAI_MODEL=gpt-4o
-OPENAI_VISION_MODEL=gpt-4o
-PORT=3001
-```
-
-### b) App address (this one is public — it is only a URL)
-
-```bash
-copy .env.example .env
-```
-
-| Where the app runs | What to put in `.env` |
-| --- | --- |
-| Android emulator | `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001` |
-| iOS simulator | `EXPO_PUBLIC_API_URL=http://localhost:3001` |
-| **Real phone (Expo Go)** | `EXPO_PUBLIC_API_URL=http://192.168.x.x:3001` (your computer's Wi-Fi address) |
-
-To find your computer's address: run `ipconfig` and read *IPv4 Address*, or
-`ifconfig | grep "inet "`. The phone and the computer must be on the **same Wi-Fi**.
-
----
-
-## 4. Run it (two terminals)
-
-> If you deployed the backend already (section 8 — Render, Docker, Vercel),
-> skip Terminal 1 and put the server's address in `.env` instead.
-
-**Terminal 1 — backend**
+**Terminal 1 — the translator server**
 
 ```bash
 npm run server
@@ -81,184 +71,173 @@ npm run server
 
 ```
 Sanskrit Translator API on http://localhost:3001
-Text model : gpt-4o
-Vision     : gpt-4o
-API key    : found (put it in server/.env)
+Translating with : free dictionary (no key, no cost)
+Photo text       : no — the app will ask the user to type
+API key          : not set
 ```
 
-**Terminal 2 — app**
+**Terminal 2 — the app**
 
 ```bash
 npx expo start
 ```
 
-Scan the QR code with Expo Go (Android: camera icon → *Scan QR code*;
-iOS: the camera app). Expo Go is all you need — no custom build, no dev client.
+Scan the QR code with Expo Go. No custom build, no dev client.
 
 ---
 
-## 5. Check the backend on its own
+## 3. Point the app at your server
+
+```bash
+copy .env.example .env          # Windows
+# cp .env.example .env           # macOS / Linux
+```
+
+| Where the app runs | `EXPO_PUBLIC_API_URL` |
+| --- | --- |
+| Android emulator | `http://10.0.2.2:3001` |
+| iOS simulator | `http://localhost:3001` |
+| **Real phone** | `http://192.168.x.x:3001` (your computer's Wi-Fi address) |
+
+Find it with `ipconfig` (Windows) or `ifconfig | grep "inet "` (Mac). The phone
+and computer must be on the **same Wi-Fi**. Restart Metro after changing `.env`.
+
+Check the server on its own:
 
 ```bash
 curl http://localhost:3001/api/health
 ```
 
 ```json
-{
-  "ok": true,
-  "model": "gpt-4o",
-  "visionModel": "gpt-4o",
-  "apiKeyConfigured": true,
-  "cachedTranslations": 0
-}
+{"ok":true,"translateEngine":"free","ocrAvailable":false,"apiKeyConfigured":false}
 ```
 
 ---
 
-## 6. How the accuracy works
+## 4. Photo scanning
 
-1. **Temperature 0.** The same sentence always produces the same Sanskrit.
-2. **One fixed system prompt** (in `server/prompts.js`) — sandhi, vibhakti,
-   vacana, lakara, names and numbers preserved, nothing added or explained.
-3. **Verification.** The Sanskrit is back-translated into the original language.
-   If it does not match the original, the card shows
+Reading text from a photo needs an online vision model, which is not free — so in
+the free setup the Scan tab **does not read photos for you**. It opens the
+camera so you can read the text comfortably and asks you to type or paste what
+you see. Everything else works exactly as before.
+
+Add `OPENAI_API_KEY` one day and photo reading switches on by itself: the Scan
+tab then reads text from photos and translates it live, with the OCR text shown
+in an editable box so you can fix mistakes.
+
+---
+
+## 5. Add the AI (optional, free tier available)
+
+Only if you want full-grammar Sanskrit and photo scanning:
+
+```bash
+copy server\.env.example server\.env
+```
+
+```env
+OPENAI_API_KEY=sk-xxxxxxxx
+OPENAI_MODEL=gpt-4o
+OPENAI_VISION_MODEL=gpt-4o
+```
+
+Then in `server/config.js` set `TRANSLATE_ENGINE` to `'llm'`, or start the
+server with `TRANSLATE_ENGINE=llm npm run server`. With the key present the app
+also turns on:
+
+- **photo reading** — the Scan tab reads text from photos and translates live
+- **self-verification** — the Sanskrit is back-translated and compared
+- **temperature 0** — the same sentence always gives the same Sanskrit
+
+You can also point at a local, completely free model instead of a paid key:
+
+```bash
+# Ollama on your own computer — no account, no cost, no data leaves the machine
+ollama pull qwen2.5:7b
+TRANSLATE_ENGINE=llm OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=ollama npm run server
+```
+
+---
+
+## 6. Consistency (why the same text always gives the same answer)
+
+1. **Dictionary first** — no randomness at all; the same words always produce
+   the same Sanskrit.
+2. **Caching, twice** — the server remembers recent answers in memory, and the
+   phone keeps its own copy in `AsyncStorage`. A repeated sentence comes back
+   instantly and always with the same wording.
+3. **Temperature 0** when the AI engine is on, plus a fixed system prompt.
+4. **Verification** in AI mode: the Sanskrit is back-translated into the source
+   language, and if the meaning does not match the card says
    *"Please double-check this translation"*.
-4. **Two caches.** The server keeps a memory cache of recent answers, and the
-   phone keeps its own cache — a repeated sentence comes back instantly and
-   always with the same wording.
-5. **Clean OCR.** Photos are read by a vision model, then the text is cleaned
-   (noise lines removed, broken words joined) *before* it is translated.
 
-Test the whole backend (translation, verification, caching, OCR cleaning)
-with **no API key and no cost** — it uses a built-in fake model:
+Free and AI answers are always marked as needing a check, because a dictionary
+cannot promise grammar.
+
+---
+
+## 7. Test it
 
 ```bash
 npm test
 ```
 
-It ends with `25 passed, 0 failed.`
+59 checks, **no API key and no network** — it covers the dictionary, the free
+engine, the online-service fallback (with the network stubbed), OCR cleaning,
+validation, caching and the AI round trip.
 
 ---
 
-## 7. Build an APK with EAS
+## 8. Deploy the server free (Render)
 
-```bash
-npm install -g eas-cli      # once
-eas login                   # once
-```
+`render.yaml` is a ready-made blueprint. **No environment variables to type.**
 
-Check that Android credentials exist (EAS can create them for you):
-
-```bash
-npm run configure:android
-```
-
-Then:
-
-```bash
-npm run build:apk           # eas build -p android --profile preview
-```
-
-`eas.json` contains three profiles:
-
-| Profile | What you get | Command |
-| --- | --- | --- |
-| `preview` | **APK** you can install on any phone (no store) | `npm run build:apk` |
-| `development` | Development build with a launcher | `npm run build:dev` |
-| `production` | Release build for Google Play | `npm run build:release` |
-
-When the build finishes, open the link, download the APK and install it.
-(Allow "install from unknown sources" when Android asks.)
-
----
-
-## 8. Deploying the backend
-
-You only need a server because the AI key must never live in the app. Once it
-is online, every phone uses the same address.
-
-```
-app  ──HTTP──▶  your server (Express)  ──HTTPS + key──▶  AI provider
-                 ▲
-                 └── OPENAI_API_KEY lives only here
-```
-
-### Option A — Render (free, recommended to start)
-
-`render.yaml` in this repository is a ready-made blueprint.
-
-1. Put the project on GitHub (or GitLab / Bitbucket).
-2. In Render: **New → Blueprint** → select the repository → **Apply**.
-3. Render asks for **`OPENAI_API_KEY`** — paste your key and apply.
-   Every other setting comes from `render.yaml`.
-4. When the build is green you get an address like
-   `https://sanskrit-translator-api.onrender.com`. Check it:
-   `https://sanskrit-translator-api.onrender.com/api/health`
-5. Point the app at it:
+1. Put this project on GitHub.
+2. Render → **New → Blueprint** → pick `veera08231/translater` → **Apply**.
+3. Wait for the build, then open
+   `https://translater-api.onrender.com/api/health`.
+4. Put that address in the app's `.env`:
 
    ```bash
-   # .env
-   EXPO_PUBLIC_API_URL=https://sanskrit-translator-api.onrender.com
+   EXPO_PUBLIC_API_URL=https://translater-api.onrender.com
    ```
 
-   Then restart `npx expo start` (or rebuild the APK).
+`rootDir: server` means only the three small server packages are installed —
+seconds, not the whole Expo dependency tree.
 
-Only the three server packages are installed (`rootDir: server`), so the build
-takes seconds and never touches the Expo dependency tree.
+**Free-plan notes**
+- The instance sleeps after 15 minutes of no traffic. The app calls
+  `/api/health` when it opens, so it is awake by the time you press
+  **Translate**; a very first request after a long pause can take ~30 s.
+- `plan: free` → `plan: starter` in `render.yaml` for an always-on instance.
+- The in-memory cache resets when the instance restarts; the phone's own cache
+  is what guarantees identical answers for you.
+- `region: singapore` is set for India. Others: `oregon`, `ohio`, `virginia`,
+  `frankfurt`.
 
-**Free plan tips**
-- A free instance sleeps after 15 minutes of no traffic. The app calls
-  `/api/health` when it opens, so the server is already awake by the time you
-  press **Translate** — but a first request after a long pause can take ~30 s.
-- For real users change `plan: free` to `plan: starter` in `render.yaml`
-  (always on, no sleeping).
-- The cache lives in memory, so it resets when the instance restarts. The
-  phone keeps its own copy, which is the one that matters most.
-- `region: singapore` is set for India. Change it in `render.yaml` if you
-  prefer (`oregon`, `ohio`, `virginia`, `frankfurt`).
-
-### Option B — Any Docker host (Railway, Fly.io, a VPS, Render)
-
-`server/Dockerfile` only ever installs the three server packages and never
-copies `.env`, so the key must be supplied by the host as an environment
-variable.
+### Other hosts
 
 ```bash
+# Docker (Railway, Fly.io, a VPS)
 docker build -t sanskrit-api ./server
-docker run -p 3001:3001 -e OPENAI_API_KEY=sk-xxxx sanskrit-api
+docker run -p 3001:3001 -e OPENAI_API_KEY=sk-... sanskrit-api
+
+# Serverless (Vercel)
+# api/translate.js and api/ocr.js reuse the same handlers
 ```
 
-### Option C — Serverless (Vercel)
-
-`api/translate.js` and `api/ocr.js` reuse exactly the same handlers:
-
-```
-POST /api/translate
-POST /api/ocr
-```
-
-Import the repository on Vercel, add `OPENAI_API_KEY` as an environment
-variable, deploy.
-
-### Any other host
-
-`server/` is a normal Node server that listens on `0.0.0.0:$PORT`:
-
-```bash
-cd server && npm install --omit=dev && node index.js
-```
-
-Environment variables it understands:
+### Settings the server understands
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | – | **Required.** The AI provider key |
-| `OPENAI_MODEL` | `gpt-4o` | Translation + verification model |
-| `OPENAI_VISION_MODEL` | `gpt-4o` | Model that reads text in photos |
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Point at any OpenAI-compatible provider |
-| `PORT` | `3001` | Provided automatically by most hosts |
+| `TRANSLATE_ENGINE` | `free` | `free`, or `llm` when you have a key |
+| `USE_FREE_APIS` | `true` | Set `false` to use only the bundled dictionary |
+| `OCR_ENGINE` | `auto` | Photo reading, on only when a key is present |
+| `OPENAI_API_KEY` | – | Optional. Enables the AI engine and photo scanning |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Any OpenAI-compatible provider, or Ollama |
+| `OPENAI_MODEL` / `OPENAI_VISION_MODEL` | `gpt-4o` | Models used in AI mode |
+| `PORT` | `3001` | Set automatically by most hosts |
 | `RATE_LIMIT_PER_MINUTE` | `40` | Requests per IP per minute |
-| `MAX_TEXT_LENGTH` | `4000` | Characters per translation |
 
 ---
 
@@ -269,20 +248,27 @@ app/                        screens (Expo Router)
   _layout.tsx               fonts + light/dark theme + stack
   (tabs)/_layout.tsx        the 3 bottom tabs
   (tabs)/index.tsx          Type
-  (tabs)/scan.tsx           Scan
+  (tabs)/scan.tsx           Scan (camera, or typing, depending on the server)
   (tabs)/history.tsx        History
   item/[id].tsx             one saved translation (modal)
 components/                 reusable pieces (Button, ResultCard, TagChip, ...)
 constants/config.ts         API address, timeouts, limits
-hooks/                      useTheme, useTranslation, useHistory, useLanguageTag
+hooks/                      useTheme, useTranslation, useHistory,
+                            useLanguageTag, useBackendInfo
 services/                   api, translate, ocr, cache, history (AsyncStorage)
 utils/                      theme, detectLanguage, cleanOcr, hash, errors, dates
 types/                      shared TypeScript types
-server/                     the backend proxy (your API key lives here)
-  package.json              its own dependencies (Render/Docker install only these)
-  Dockerfile                for Railway, Fly.io, a VPS, or Docker on Render
+server/
+  engines/
+    lexicon.js              ~2,100 hand-checked entries
+    freeEngine.js           dictionary + conjugations + language detection
+    webEngine.js            the free online services
+    index.js                which engine is switched on
+  handlers.js  llm.js  prompts.js  cache.js  index.js
+  smoke-test.js             59 checks, no key, no network
+render.yaml                 one-click Render blueprint
+server/Dockerfile           for Railway, Fly.io, a VPS
 api/                        serverless version of the same two endpoints
-render.yaml                 one-click deploy blueprint for Render
 ```
 
 ---
@@ -291,23 +277,25 @@ render.yaml                 one-click deploy blueprint for Render
 
 | What you see | What to do |
 | --- | --- |
-| "No internet. Please connect and try again." | The phone cannot reach the backend. Check the phone and computer are on the same Wi-Fi and `EXPO_PUBLIC_API_URL` uses your computer's IP, not `localhost`. |
-| "The translator is not set up yet." | `OPENAI_API_KEY` is missing or wrong in `server/.env`. Restart the server. |
-| "Camera is switched off for this app." | Turn the camera on in the phone settings, then reopen the app. |
-| Sanskrit letters look wrong | The font did not load — restart Expo with `npx expo start --clear`. |
+| "No internet. Please connect and try again." | The phone cannot reach the server. Same Wi-Fi? Is `EXPO_PUBLIC_API_URL` your computer's IP rather than `localhost`? |
+| "Reading text from photos is not available here." | Expected in the free setup — type the text instead. Add an `OPENAI_API_KEY` on the server to turn it on. |
+| "This is taking too long. Please try again." | A free Render instance was asleep; press **Try again**. |
+| The server prints `Photo text : no` | Correct — no vision model configured. |
+| Some words are left untranslated | The dictionary did not know them and no online service answered. They are shown as-is on purpose rather than guessed. |
+| Sanskrit letters look wrong | Restart Expo with `npx expo start --clear`. |
 | Changes to `.env` do nothing | Stop Metro and start it again; values are read at start-up. |
 
 ---
 
 ## 11. Good to know
 
-- **Listen** uses the phone's Devanagari voice (Hindi). Most phones have no
-  separate Sanskrit voice, so the pronunciation is close but not perfect.
-- **Live scanning** takes a photo every ~4.5 seconds and only sends it when the
-  text changed. Edit the text yourself and the camera stops, so your correction
-  is never overwritten.
-- Photos are sent to your backend for reading and are not stored anywhere.
-- History and the cache live on the phone (AsyncStorage) and can be wiped from
-  the History tab.
-
----
+- **Free answers are word-by-word.** The Sanskrit words are hand-checked and the
+  verbs are conjugated, but word order is the original one. Always read the
+  *"please double-check"* note — that is exactly what it is telling you.
+- **The free online services are someone else's free service.** They can be slow
+  or rate-limited. When that happens the app falls back to the dictionary, and if
+  the dictionary also fails the original words are shown rather than invented.
+- **Nothing is stored anywhere** except your own phone (history and cache) and
+  the server's short-lived memory cache.
+- **Listen** uses the phone's Devanagari (Hindi) voice; most phones have no
+  separate Sanskrit voice.

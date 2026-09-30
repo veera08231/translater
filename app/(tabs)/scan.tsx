@@ -15,6 +15,7 @@ import { SmallButton } from '@/components/SmallButton';
 import { TagChip } from '@/components/TagChip';
 import { TextArea } from '@/components/TextArea';
 import { useTheme } from '@/hooks/useTheme';
+import { useBackendInfo } from '@/hooks/useBackendInfo';
 import { useLanguageTag } from '@/hooks/useLanguageTag';
 import { useTranslation } from '@/hooks/useTranslation';
 import { readTextFromPhoto } from '@/services/ocr';
@@ -33,6 +34,7 @@ import { fontSize, radius, spacing } from '@/utils/theme';
 export default function ScanScreen() {
   const theme = useTheme();
   const isFocused = useIsFocused();
+  const backend = useBackendInfo();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -46,6 +48,11 @@ export default function ScanScreen() {
 
   const language = useLanguageTag(text);
   const { status, result, error, isLoading, translate } = useTranslation('scanned');
+
+  // What this backend can actually do: null = still asking.
+  const readingAvailable = backend.ocrAvailable;
+  const canReadPhotos = readingAvailable === true;
+  const hasText = text.trim().length > 0;
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
@@ -126,7 +133,7 @@ export default function ScanScreen() {
 
   // Live scanning: one photo every few seconds while this screen is in front.
   useEffect(() => {
-    if (!permission?.granted || !isFocused) return;
+    if (!permission?.granted || !isFocused || !canReadPhotos) return;
 
     let cancelled = false;
     let busy = false;
@@ -154,7 +161,7 @@ export default function ScanScreen() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [permission?.granted, isFocused, applyScannedText]);
+  }, [permission?.granted, isFocused, canReadPhotos, applyScannedText]);
 
   const onManualEdit = (value: string) => {
     setText(value);
@@ -163,7 +170,67 @@ export default function ScanScreen() {
     autoScan.current = false;
   };
 
+  // ------------------------------------------------------- shared pieces
+  const textSection = hasText ? (
+    <View style={[styles.gap, { gap: spacing.md }]}>
+      <Text style={[styles.sectionLabel, { color: theme.text }]}>
+        {canReadPhotos ? 'Text we read' : 'Your text'}
+      </Text>
+      <Text style={[styles.sectionHelper, { color: theme.textMuted }]}>
+        {canReadPhotos
+          ? 'Fix any mistakes here, then tap Translate.'
+          : 'Type or paste the words you see, then tap Translate.'}
+      </Text>
+
+      <TextArea
+        value={text}
+        onChangeText={onManualEdit}
+        minHeight={120}
+        placeholder="Type or paste text here"
+        accessibilityLabel="Text to translate"
+      />
+
+      {language ? <TagChip label={`${language.name} detected`} icon="language-outline" /> : null}
+
+      <BigButton
+        label="Translate"
+        icon="language"
+        loading={isLoading}
+        onPress={() => void translate(text)}
+        accessibilityHint="Translates the text into Sanskrit"
+      />
+    </View>
+  ) : null;
+
+  const outcome =
+    scanError || isLoading || (status === 'done' && result) || (status === 'error' && error) ? (
+      <View style={[styles.gap, { gap: spacing.lg }]}>
+        {scanError ? <NoticeBanner tone="error" message={scanError} /> : null}
+
+        {status === 'error' && error ? (
+          <NoticeBanner
+            tone="error"
+            message={error}
+            onRetry={hasText ? () => void translate(text) : undefined}
+          />
+        ) : null}
+
+        {isLoading ? <LoadingBlock label="Translating..." /> : null}
+
+        {status === 'done' && result ? <ResultCard result={result} /> : null}
+      </View>
+    ) : null;
+
   // ---------------------------------------------------------------- gate
+  if (readingAvailable === null) {
+    return (
+      <Screen>
+        <ScreenTitle title="Scan" helper="Point your camera at text" />
+        <LoadingBlock label="Checking what is available..." />
+      </Screen>
+    );
+  }
+
   if (!permission) {
     return (
       <Screen>
@@ -175,6 +242,47 @@ export default function ScanScreen() {
 
   if (!permission.granted) {
     const blocked = !permission.canAskAgain;
+
+    // This backend cannot read photos, so never block the screen on a camera.
+    if (!canReadPhotos) {
+      return (
+        <Screen>
+          <ScreenTitle title="Scan" helper="Type or paste the words you see" />
+
+          <View
+            style={[
+              styles.permissionCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          >
+            <Ionicons name="create-outline" size={44} color={theme.primary} />
+            <Text style={[styles.permissionTitle, { color: theme.text }]}>
+              Reading photos is switched off
+            </Text>
+            <Text style={[styles.permissionBody, { color: theme.textMuted }]}>
+              Type or paste the words yourself — you get the same Sanskrit translation.
+            </Text>
+            {blocked ? (
+              <NoticeBanner
+                tone="warning"
+                message="Camera is switched off for this app. Please turn it on in your phone settings."
+              />
+            ) : null}
+          </View>
+
+          {!blocked ? (
+            <SmallButton
+              label="Turn on Camera"
+              icon="camera-outline"
+              onPress={() => void requestPermission()}
+            />
+          ) : null}
+
+          {textSection}
+          {outcome}
+        </Screen>
+      );
+    }
 
     return (
       <Screen>
@@ -223,13 +331,17 @@ export default function ScanScreen() {
   }
 
   // -------------------------------------------------------------- camera
-  const hasText = text.trim().length > 0;
-
   return (
     <Screen>
       <ScreenTitle
         title="Scan"
-        helper={hasText ? 'Check the text below, then translate' : 'Point your camera at text'}
+        helper={
+          hasText
+            ? 'Check the text below, then translate'
+            : canReadPhotos
+              ? 'Point your camera at text'
+              : 'Point at the text, then type it below'
+        }
       />
 
       <View style={[styles.cameraBox, hasText ? styles.cameraBoxSmall : null]}>
@@ -246,91 +358,38 @@ export default function ScanScreen() {
 
         <View pointerEvents="none" style={styles.hintWrap}>
           <Text style={styles.hint}>
-            {reading ? 'Reading the text...' : 'Hold steady and keep the text clear'}
+            {reading
+              ? 'Reading the text...'
+              : canReadPhotos
+                ? 'Hold steady and keep the text clear'
+                : 'Point at the text, then type it below'}
           </Text>
         </View>
       </View>
 
-      <View style={styles.buttonRow}>
-        <SmallButton
-          label="Take Photo"
-          icon="camera-outline"
-          flex
-          loading={reading}
-          onPress={() => void takePhoto()}
-          accessibilityHint="Takes one photo and reads the text"
-        />
-        <SmallButton
-          label="Choose from Gallery"
-          icon="images-outline"
-          flex
-          disabled={reading}
-          onPress={() => void chooseFromGallery()}
-          accessibilityHint="Picks a photo from your phone"
-        />
-      </View>
-
-      {scanError ? (
-        <View style={styles.gap}>
-          <NoticeBanner tone="error" message={scanError} />
-        </View>
-      ) : null}
-
-      {status === 'error' && error ? (
-        <View style={styles.gap}>
-          <NoticeBanner
-            tone="error"
-            message={error}
-            onRetry={hasText ? () => void translate(text) : undefined}
+      {canReadPhotos ? (
+        <View style={styles.buttonRow}>
+          <SmallButton
+            label="Take Photo"
+            icon="camera-outline"
+            flex
+            loading={reading}
+            onPress={() => void takePhoto()}
+            accessibilityHint="Takes one photo and reads the text"
+          />
+          <SmallButton
+            label="Choose from Gallery"
+            icon="images-outline"
+            flex
+            disabled={reading}
+            onPress={() => void chooseFromGallery()}
+            accessibilityHint="Picks a photo from your phone"
           />
         </View>
       ) : null}
 
-      {hasText ? (
-        <>
-          <View style={styles.gap}>
-            <Text style={[styles.sectionLabel, { color: theme.text }]}>Text we read</Text>
-            <Text style={[styles.sectionHelper, { color: theme.textMuted }]}>
-              Fix any mistakes here, then tap Translate.
-            </Text>
-          </View>
-
-          <TextArea
-            value={text}
-            onChangeText={onManualEdit}
-            minHeight={120}
-            placeholder="Type or paste text here"
-            accessibilityLabel="Text read from the photo"
-            style={styles.gap}
-          />
-
-          {language ? (
-            <View style={styles.tagRow}>
-              <TagChip label={`${language.name} detected`} icon="language-outline" />
-            </View>
-          ) : null}
-
-          <BigButton
-            label="Translate"
-            icon="language"
-            loading={isLoading}
-            onPress={() => void translate(text)}
-            accessibilityHint="Translates the text into Sanskrit"
-          />
-        </>
-      ) : null}
-
-      {isLoading ? (
-        <View style={styles.gap}>
-          <LoadingBlock label="Translating..." />
-        </View>
-      ) : null}
-
-      {status === 'done' && result ? (
-        <View style={styles.gap}>
-          <ResultCard result={result} />
-        </View>
-      ) : null}
+      {textSection}
+      {outcome}
     </Screen>
   );
 }

@@ -4,6 +4,14 @@
 
 export type TranslationSource = 'typed' | 'scanned';
 
+/**
+ * Which translator produced the answer.
+ * - 'free': our bundled Sanskrit dictionary (always available, no key)
+ * - 'web':  a free online translation service (used when the dictionary is unsure)
+ * - 'llm':  an AI model, when OPENAI_API_KEY is set
+ */
+export type TranslationEngine = 'free' | 'web' | 'llm';
+
 export type TranslationResult = {
   /** Stable local id (history key). */
   id: string;
@@ -17,6 +25,14 @@ export type TranslationResult = {
   detectedCode: string;
   /** False when the back-translation check did not match. */
   verified: boolean;
+  /**
+   * 'free' = bundled dictionary (no key, word-by-word).
+   * 'web'  = a free online service.
+   * 'llm'  = an AI model (full grammar).
+   */
+  engine?: TranslationEngine;
+  /** Free engine only: how many percent of the words it knew (0-100). */
+  coverage?: number;
   /** Back-translation used for the check (kept for debugging / trust). */
   backTranslation?: string;
   /** Where the text came from. */
@@ -41,6 +57,9 @@ export type CachedTranslation = {
   detectedCode: string;
   verified: boolean;
   backTranslation?: string;
+  /** Which engine produced it, so the app can explain itself after a reload. */
+  engine?: 'free' | 'llm';
+  coverage?: number;
 };
 
 export type OcrResult = {

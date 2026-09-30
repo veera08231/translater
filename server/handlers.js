@@ -9,6 +9,9 @@ const config = require('./config');
 const cache = require('./cache');
 const { cleanOcrText } = require('./cleanOcr');
 const { chat, readImageText, ServerError } = require('./llm');
+const { translateFree } = require('./engines/freeEngine');
+const { translateWithFreeApis } = require('./engines/webEngine');
+const { ocrAvailable, activeTranslateEngine } = require('./engines');
 const {
   TRANSLATE_SYSTEM,
   translateUserMessage,
@@ -124,7 +127,42 @@ async function judge(original, backTranslation) {
   }
 }
 
-async function translate({ text }) {
+/**
+ * The engine in charge. Free by default, so the app works with no key at all.
+ *
+ * Our own dictionary goes first. Only when it is unsure about a sentence do we
+ * ask the free online services, so most answers come from the curated
+ * dictionary and cost nothing.
+ */
+async function translate(text) {
+  if (activeTranslateEngine() === 'llm') return translateWithModel(text);
+
+  const cacheKey = cache.keyOf(['free', text]);
+  const hit = cache.get(cacheKey);
+  if (hit) return { ...hit, cached: true };
+
+  let result = translateFree(text);
+
+  if (config.USE_FREE_APIS !== false && result.coverage < 60) {
+    result = await translateWithFreeApis(text, result);
+  }
+
+  const payload = {
+    sanskrit: result.sanskrit,
+    detectedLanguage: result.detectedLanguage,
+    detectedCode: result.detectedCode,
+    verified: false,
+    engine: result.engine || 'free',
+    coverage: result.coverage,
+    cached: false,
+  };
+
+  cache.set(cacheKey, payload);
+  return payload;
+}
+
+/** The AI model: best grammar, and it verifies itself by back-translating. */
+async function translateWithModel(text) {
   const key = cache.keyOf([config.OPENAI_MODEL, text]);
   const hit = cache.get(key);
   if (hit) return { ...hit, cached: true };
@@ -162,6 +200,7 @@ async function translate({ text }) {
     detectedCode: languageCode(detectedLanguage),
     verified,
     backTranslation: backTranslation || undefined,
+    engine: 'llm',
   };
 
   cache.set(key, result);
@@ -180,7 +219,7 @@ async function handleTranslate(body) {
   }
 
   try {
-    return { status: 200, body: await translate({ text }) };
+    return { status: 200, body: await translate(text) };
   } catch (error) {
     return toErrorResponse(error);
   }
@@ -189,6 +228,17 @@ async function handleTranslate(body) {
 async function handleOcr(body) {
   const image = typeof body?.image === 'string' ? body.image : '';
   const mimeType = typeof body?.mimeType === 'string' ? body.mimeType : 'image/jpeg';
+
+  if (!ocrAvailable()) {
+    // Free mode: no vision model, so the app asks the user to type the text.
+    return {
+      status: 503,
+      body: {
+        code: 'no_ocr',
+        error: 'Reading text from photos is not available without a vision model.',
+      },
+    };
+  }
 
   if (!image) return { status: 400, body: { code: 'empty', error: 'No image was sent.' } };
   if (image.length * 0.75 > config.MAX_IMAGE_BYTES) {

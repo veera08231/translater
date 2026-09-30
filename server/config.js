@@ -11,6 +11,25 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 const config = {
   PORT: Number(process.env.PORT || 3001),
 
+  /**
+   * 'free'  = bundled Sanskrit dictionary. No key, no cost. (default)
+   * 'llm'   = an AI model. Best grammar, needs a key (or a local Ollama).
+   */
+  TRANSLATE_ENGINE: (process.env.TRANSLATE_ENGINE || 'free').toLowerCase(),
+
+  /**
+   * Reading text from photos needs an online vision model, so it is only
+   * switched on when a key is present.
+   * 'auto' = on when OPENAI_API_KEY is set, otherwise off.
+   */
+  OCR_ENGINE: (process.env.OCR_ENGINE || 'auto').toLowerCase(),
+
+  /**
+   * Set to false to use only the bundled dictionary and never call the free
+   * online translation services.
+   */
+  USE_FREE_APIS: process.env.USE_FREE_APIS !== 'false',
+
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
   /** Change this to use any OpenAI-compatible provider or a local gateway. */
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
