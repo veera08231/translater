@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useIsFocused } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { BigButton } from '@/components/BigButton';
+import { CameraViewer } from '@/components/CameraViewer';
 import { LoadingBlock } from '@/components/LoadingBlock';
 import { NoticeBanner } from '@/components/NoticeBanner';
 import { ResultCard } from '@/components/ResultCard';
@@ -40,6 +41,7 @@ export default function ScanScreen() {
 
   const [text, setText] = useState('');
   const [reading, setReading] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
   const lastRead = useRef('');
@@ -60,6 +62,16 @@ export default function ScanScreen() {
     });
     return () => subscription.remove();
   }, []);
+
+  // Opening the Scan tab asks for the camera straight away, so the user never
+  // has to hunt for a button to make it work.
+  const askedForCamera = useRef(false);
+  useEffect(() => {
+    if (!permission || askedForCamera.current) return;
+    if (permission.granted || !permission.canAskAgain) return;
+    askedForCamera.current = true;
+    void requestPermission();
+  }, [permission, requestPermission]);
 
   /** New text from the camera: show it and translate it straight away. */
   const applyScannedText = useCallback(
@@ -276,7 +288,13 @@ export default function ScanScreen() {
               icon="camera-outline"
               onPress={() => void requestPermission()}
             />
-          ) : null}
+          ) : (
+            <SmallButton
+              label="Open Settings"
+              icon="settings-outline"
+              onPress={() => void Linking.openSettings()}
+            />
+          )}
 
           {textSection}
           {outcome}
@@ -344,7 +362,12 @@ export default function ScanScreen() {
         }
       />
 
-      <View style={[styles.cameraBox, hasText ? styles.cameraBoxSmall : null]}>
+      <Pressable
+        onPress={() => setViewerOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Open the full-screen camera to see the text clearly"
+        style={[styles.cameraBox, hasText ? styles.cameraBoxSmall : null]}
+      >
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
@@ -356,6 +379,11 @@ export default function ScanScreen() {
           <View style={styles.frame} />
         </View>
 
+        <View pointerEvents="none" style={styles.enlargeChip}>
+          <Ionicons name="expand-outline" size={15} color="#FFFFFF" />
+          <Text style={styles.enlargeText}>Tap to enlarge</Text>
+        </View>
+
         <View pointerEvents="none" style={styles.hintWrap}>
           <Text style={styles.hint}>
             {reading
@@ -365,7 +393,7 @@ export default function ScanScreen() {
                 : 'Point at the text, then type it below'}
           </Text>
         </View>
-      </View>
+      </Pressable>
 
       {canReadPhotos ? (
         <View style={styles.buttonRow}>
@@ -390,6 +418,17 @@ export default function ScanScreen() {
 
       {textSection}
       {outcome}
+
+      <CameraViewer
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        cameraRef={cameraRef}
+        hint={
+          canReadPhotos
+            ? 'Hold steady and keep the text clear'
+            : 'Read the text, then tap Done and type it below'
+        }
+      />
     </Screen>
   );
 }
@@ -403,6 +442,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cameraBoxSmall: { height: 210 },
+  enlargeChip: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+  },
+  enlargeText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.meta,
+    fontWeight: '700',
+  },
   frameWrap: {
     position: 'absolute',
     top: 0,
