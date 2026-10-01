@@ -5,7 +5,7 @@
  * example photo reading needs an online reader, which the free setup has not.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { getHealth, type BackendInfo } from '@/services/api';
 
@@ -19,16 +19,23 @@ const PENDING: BackendInfo = {
 let stored: BackendInfo | null = null;
 let request: Promise<BackendInfo> | null = null;
 
-export function useBackendInfo(): BackendInfo {
+function ask(): Promise<BackendInfo> {
+  if (!request) {
+    request = getHealth().finally(() => {
+      request = null;
+    });
+  }
+  return request;
+}
+
+export function useBackendInfo(): BackendInfo & { refresh: () => void } {
   const [info, setInfo] = useState<BackendInfo>(() => stored ?? PENDING);
 
   useEffect(() => {
     if (stored) return;
 
     let alive = true;
-    if (!request) request = getHealth();
-
-    void request.then((value) => {
+    void ask().then((value) => {
       stored = value;
       if (alive) setInfo(value);
     });
@@ -38,5 +45,12 @@ export function useBackendInfo(): BackendInfo {
     };
   }, []);
 
-  return info;
+  const refresh = useCallback(() => {
+    void ask().then((value) => {
+      stored = value;
+      setInfo(value);
+    });
+  }, []);
+
+  return { ...info, refresh };
 }

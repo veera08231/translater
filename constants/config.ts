@@ -12,8 +12,11 @@ export const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL
 ).replace(/\/+$/, '');
 
-/** Translate + verify can take a while, so we allow a generous timeout. */
-export const TRANSLATE_TIMEOUT_MS = 60_000;
+/**
+ * Translate + verify can take a while, and a free server that has been asleep
+ * has to wake up first, so we allow generous time.
+ */
+export const TRANSLATE_TIMEOUT_MS = 90_000;
 
 /** The AI model can read a photo in seconds. The free reader runs on the
  * server itself, which can be slow (or waking up), so it gets more time.

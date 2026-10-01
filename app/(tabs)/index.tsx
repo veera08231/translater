@@ -9,6 +9,7 @@ import { Screen } from '@/components/Screen';
 import { ScreenTitle } from '@/components/ScreenTitle';
 import { TagChip } from '@/components/TagChip';
 import { TextArea } from '@/components/TextArea';
+import { useBackendInfo } from '@/hooks/useBackendInfo';
 import { useLanguageTag } from '@/hooks/useLanguageTag';
 import { useTranslation } from '@/hooks/useTranslation';
 import { spacing } from '@/utils/theme';
@@ -19,6 +20,7 @@ import { spacing } from '@/utils/theme';
  */
 export default function TypeScreen() {
   const [text, setText] = useState('');
+  const backend = useBackendInfo();
   const language = useLanguageTag(text);
   const { status, result, error, isLoading, translate } = useTranslation('typed');
 
@@ -30,6 +32,17 @@ export default function TypeScreen() {
   return (
     <Screen>
       <ScreenTitle title="Type" helper="Type or paste text in any language" />
+
+      {!backend.ok ? (
+        <View style={styles.gap}>
+          <NoticeBanner
+            tone="error"
+            message="Cannot reach the translator. Check your internet and try again."
+            onRetry={backend.refresh}
+            retryLabel="Try again"
+          />
+        </View>
+      ) : null}
 
       <TextArea
         value={text}

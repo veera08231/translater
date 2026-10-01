@@ -365,6 +365,17 @@ export default function ScanScreen() {
         }
       />
 
+      {!backend.ok ? (
+        <View style={styles.gap}>
+          <NoticeBanner
+            tone="error"
+            message="Cannot reach the translator, so photos cannot be read. Check your internet."
+            onRetry={backend.refresh}
+            retryLabel="Try again"
+          />
+        </View>
+      ) : null}
+
       <Pressable
         onPress={() => setViewerOpen(true)}
         accessibilityRole="button"
