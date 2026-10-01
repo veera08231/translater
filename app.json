@@ -10,7 +10,9 @@
     "newArchEnabled": true,
     "primaryColor": "#5B21B6",
     "backgroundColor": "#FFFFFF",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.sanskrittranslator",
@@ -27,7 +29,10 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -56,6 +61,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7c6a5ad1-6f29-46f0-a528-0b976c9a0ee1"
+      }
+    },
+    "owner": "veeraexe"
   }
 }
