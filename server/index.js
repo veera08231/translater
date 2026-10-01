@@ -13,7 +13,8 @@ const cors = require('cors');
 const config = require('./config');
 const cache = require('./cache');
 const { handleTranslate, handleOcr } = require('./handlers');
-const { ocrAvailable, activeTranslateEngine } = require('./engines');
+const { ocrAvailable, autoScanAvailable, activeTranslateEngine } = require('./engines');
+const { warmUp } = require('./engines/ocrFree');
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.get('/api/health', (_req, res) => {
     // What the app uses to decide whether the Scan tab can read photos.
     translateEngine: activeTranslateEngine(),
     ocrAvailable: ocrAvailable(),
+    autoScanAvailable: autoScanAvailable(),
     model: config.OPENAI_MODEL,
     visionModel: config.OPENAI_VISION_MODEL,
     apiKeyConfigured: Boolean(config.OPENAI_API_KEY),
@@ -105,8 +107,11 @@ const server = app.listen(config.PORT, '0.0.0.0', () => {
   /* eslint-disable no-console */
   console.log(`Sanskrit Translator API on http://localhost:${config.PORT}`);
   console.log(`Translating with : ${activeTranslateEngine() === 'free' ? 'free dictionary (no key, no cost)' : config.OPENAI_MODEL}`);
-  console.log(`Photo text       : ${ocrAvailable() ? `yes (${config.OPENAI_VISION_MODEL})` : 'no — the app will ask the user to type'}`);
+  console.log(`Photo text       : ${ocrAvailable() ? (config.OPENAI_API_KEY ? `yes (${config.OPENAI_VISION_MODEL})` : 'yes (free Tesseract reader)') : 'no — the app will ask the user to type'}`);
   console.log(`API key          : ${keyState}${hasEnvFile ? ' (from server/.env)' : ''}`);
+
+  // Start the photo reader now, so the first scan is not slower than the rest.
+  warmUp();
   /* eslint-enable no-console */
 });
 

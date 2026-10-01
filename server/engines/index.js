@@ -1,9 +1,11 @@
 const config = require('../config');
+const { freeOcrAvailable } = require('./ocrFree');
 
-/** True when photos can be read (needs an online vision model). */
+/** True when photos can be read: by the AI model, or by the free reader. */
 function ocrAvailable() {
   if (config.OCR_ENGINE === 'off') return false;
-  return Boolean(config.OPENAI_API_KEY);
+  if (llmAvailable()) return true;
+  return freeOcrAvailable();
 }
 
 /** True when the AI translation engine can actually run. */
@@ -17,4 +19,17 @@ function activeTranslateEngine() {
   return 'free';
 }
 
-module.exports = { ocrAvailable, llmAvailable, activeTranslateEngine };
+/**
+ * Live automatic scanning is only worth it with a fast model behind it, so it
+ * is switched on only when an AI key is present.
+ */
+function autoScanAvailable() {
+  return llmAvailable();
+}
+
+module.exports = {
+  ocrAvailable,
+  llmAvailable,
+  autoScanAvailable,
+  activeTranslateEngine,
+};

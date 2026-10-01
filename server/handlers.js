@@ -11,7 +11,8 @@ const { cleanOcrText } = require('./cleanOcr');
 const { chat, readImageText, ServerError } = require('./llm');
 const { translateFree } = require('./engines/freeEngine');
 const { translateWithFreeApis } = require('./engines/webEngine');
-const { ocrAvailable, activeTranslateEngine } = require('./engines');
+const { recognize } = require('./engines/ocrFree');
+const { ocrAvailable, llmAvailable, activeTranslateEngine } = require('./engines');
 const {
   TRANSLATE_SYSTEM,
   translateUserMessage,
@@ -230,14 +231,34 @@ async function handleOcr(body) {
   const mimeType = typeof body?.mimeType === 'string' ? body.mimeType : 'image/jpeg';
 
   if (!ocrAvailable()) {
-    // Free mode: no vision model, so the app asks the user to type the text.
+    // Nothing can read photos here, so say so plainly.
     return {
       status: 503,
       body: {
         code: 'no_ocr',
-        error: 'Reading text from photos is not available without a vision model.',
+        error: 'Reading text from photos is not available on this server.',
       },
     };
+  }
+
+  // The AI vision model when there is a key, otherwise the free reader.
+  if (!llmAvailable()) {
+    try {
+      const result = await recognize(image);
+      return { status: 200, body: result };
+    } catch (error) {
+      const message = String(error && error.message);
+      const unclear = /no text found/i.test(message);
+      return {
+        status: unclear ? 422 : 503,
+        body: {
+          code: unclear ? 'unclear' : 'server',
+          error: unclear
+            ? 'No text found in that photo. Please try again with better light.'
+            : 'Could not read the photo. Please try again.',
+        },
+      };
+    }
   }
 
   if (!image) return { status: 400, body: { code: 'empty', error: 'No image was sent.' } };

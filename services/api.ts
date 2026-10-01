@@ -44,6 +44,8 @@ export type BackendInfo = {
   translateEngine: 'free' | 'llm';
   /** null = still checking. */
   ocrAvailable: boolean | null;
+  /** Live scanning while pointing — only with a fast model behind it. */
+  autoScanAvailable?: boolean;
   apiKeyConfigured?: boolean;
 };
 

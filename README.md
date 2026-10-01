@@ -140,14 +140,32 @@ and computer must be on the **same Wi-Fi**. Restart Metro after changing `.env`.
 
 ## 4. Photo scanning
 
-Reading text from a photo needs an online vision model, which is not free — so in
-the free setup the Scan tab **does not read photos for you**. It opens the
-camera so you can read the text comfortably and asks you to type or paste what
-you see. Everything else works exactly as before.
+**Scanning works with no API key.** The server reads the photo itself using
+Tesseract (open source, free) and then translates the words with the same free
+translator the rest of the app uses.
 
-Add `OPENAI_API_KEY` one day and photo reading switches on by itself: the Scan
-tab then reads text from photos and translates it live, with the OCR text shown
-in an editable box so you can fix mistakes.
+How to use it:
+
+1. Tap **Scan**. The camera opens and asks for permission once.
+2. Point at the text. The picture has a **Tap to enlarge** chip.
+3. Tap the picture for the full-screen camera — zoom with − and +, and switch
+   the torch on in the dark.
+4. Tap **Read the Text**. The photo is read, the Sanskrit appears, and you can
+   correct any mistake in the box below.
+5. **Take Photo** does the same without enlarging, and **Choose from Gallery**
+   works on a picture you already have.
+
+Two honest notes:
+
+- Reading a photo takes real computing, and a free server has very little of
+  it, so expect a few seconds (longer on the first photo of a session, or after
+  the free server has been asleep). The $7/month Render plan makes it instant.
+- Live scanning while you point — the text appears by itself — only happens
+  when a fast model is behind the server. With the free reader you tap
+  **Read the Text** instead, so a slow server is never flooded with photos.
+
+Change what the free reader knows with `OCR_LANGUAGES` (default
+`eng+hin+tam`); fewer languages means faster reading and less memory.
 
 ---
 
@@ -311,7 +329,9 @@ docker run -p 3001:3001 -e OPENAI_API_KEY=sk-... sanskrit-api
 | --- | --- | --- |
 | `TRANSLATE_ENGINE` | `free` | `free`, or `llm` when you have a key |
 | `USE_FREE_APIS` | `true` | Set `false` to use only the bundled dictionary |
-| `OCR_ENGINE` | `auto` | Photo reading, on only when a key is present |
+| `OCR_ENGINE` | `auto` | Photo reading (works without a key) |
+| `OCR_LANGUAGES` | `eng+hin+tam` | Languages the free photo reader knows |
+| `OCR_TIMEOUT_MS` | `150000` | How long the server waits for a photo |
 | `OPENAI_API_KEY` | – | Optional. Enables the AI engine and photo scanning |
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Any OpenAI-compatible provider, or Ollama |
 | `OPENAI_MODEL` / `OPENAI_VISION_MODEL` | `gpt-4o` | Models used in AI mode |

@@ -20,6 +20,8 @@ const { handleTranslate, handleOcr } = require('./handlers');
 const { createMockModel } = require('./mock-model');
 const { translateFree } = require('./engines/freeEngine');
 const { translateWithFreeApis, chunkText } = require('./engines/webEngine');
+const { freeOcrAvailable } = require('./engines/ocrFree');
+const { ocrAvailable } = require('./engines');
 const { WORDS, VERB_FORMS, PHRASES, NATIVE, GENERATED } = require('./engines/lexicon');
 
 let passed = 0;
@@ -120,8 +122,14 @@ async function main() {
   check('says which engine was used', free.body.engine === 'free');
   check('warns the user to check it', free.body.verified === false);
 
+  check('the free photo reader is installed', freeOcrAvailable() === true);
+  check('photo reading works without a key', ocrAvailable() === true);
+
+  // It can still be switched off, and then the app is told plainly.
+  config.OCR_ENGINE = 'off';
   const noVision = await handleOcr({ image: 'aGVsbG8=', mimeType: 'image/jpeg' });
-  check('photo reading reports itself as unavailable', noVision.status === 503 && noVision.body.code === 'no_ocr');
+  check('photo reading can be switched off', noVision.status === 503 && noVision.body.code === 'no_ocr');
+  config.OCR_ENGINE = 'auto';
 
   config.OPENAI_API_KEY = savedKey;
 

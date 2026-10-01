@@ -15,8 +15,10 @@ export const API_BASE_URL = (
 /** Translate + verify can take a while, so we allow a generous timeout. */
 export const TRANSLATE_TIMEOUT_MS = 60_000;
 
-/** Vision OCR of a photo. */
-export const OCR_TIMEOUT_MS = 45_000;
+/** The AI model can read a photo in seconds. The free reader runs on the
+ * server itself, which can be slow (or waking up), so it gets more time.
+ * The server gives up a little earlier and sends a friendly message. */
+export const OCR_TIMEOUT_MS = 170_000;
 
 /** We never send more than this many characters to the model. */
 export const MAX_TEXT_LENGTH = 4000;

@@ -8,6 +8,7 @@ export type ApiErrorCode =
   | 'too_many'
   | 'empty'
   | 'unclear'
+  | 'unreadable'
   | 'no_ocr'
   | 'server'
   | 'not_configured'
@@ -31,6 +32,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   too_many: 'Too many requests. Please wait a moment and try again.',
   empty: 'No text found. Please type or scan some text.',
   unclear: 'The text is not clear enough. Please try again with better light.',
+  unreadable: 'No text found in that photo. Please try again with better light.',
   no_ocr: 'Reading text from photos is not available here. Please type what you see.',
   server: 'Something went wrong on our side. Please try again.',
   not_configured: 'The translator is not set up yet. Please try again later.',

@@ -8,6 +8,7 @@
 
 import { useEffect, useState, type RefObject } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   StyleSheet,
@@ -26,15 +27,28 @@ type Props = {
   onClose: () => void;
   /** Shared with the small preview so photos can still be taken from here. */
   cameraRef: RefObject<CameraView | null>;
+  /** When given, the big button reads the photo instead of just closing. */
+  onCapture?: () => void | Promise<void>;
+  captureLabel?: string;
+  closeLabel?: string;
   hint?: string;
 };
 
 const STEP = 0.1;
 
-export function CameraViewer({ visible, onClose, cameraRef, hint }: Props) {
+export function CameraViewer({
+  visible,
+  onClose,
+  cameraRef,
+  onCapture,
+  captureLabel,
+  closeLabel = 'Done',
+  hint,
+}: Props) {
   const theme = useTheme();
   const [zoom, setZoom] = useState(0);
   const [torch, setTorch] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   // Start fresh every time it opens.
   useEffect(() => {
@@ -118,12 +132,35 @@ export function CameraViewer({ visible, onClose, cameraRef, hint }: Props) {
           </View>
 
           <Pressable
-            onPress={onClose}
+            onPress={async () => {
+              if (!onCapture) {
+                onClose();
+                return;
+              }
+              // Take the photo while this camera is still on screen.
+              setBusy(true);
+              try {
+                await onCapture();
+              } finally {
+                setBusy(false);
+                onClose();
+              }
+            }}
             accessibilityRole="button"
-            accessibilityLabel="Done"
-            style={({ pressed }) => [styles.done, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }]}
+            accessibilityLabel={onCapture ? captureLabel || 'Read the Text' : closeLabel}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.done,
+              { backgroundColor: theme.primary, opacity: pressed || busy ? 0.8 : 1 },
+            ]}
           >
-            <Text style={[styles.doneText, { color: theme.onPrimary }]}>Done</Text>
+            {busy ? (
+              <ActivityIndicator color={theme.onPrimary} />
+            ) : (
+              <Text style={[styles.doneText, { color: theme.onPrimary }]}>
+                {onCapture ? captureLabel || 'Read the Text' : closeLabel}
+              </Text>
+            )}
           </Pressable>
         </View>
       </View>

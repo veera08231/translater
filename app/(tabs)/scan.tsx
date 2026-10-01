@@ -54,6 +54,9 @@ export default function ScanScreen() {
   // What this backend can actually do: null = still asking.
   const readingAvailable = backend.ocrAvailable;
   const canReadPhotos = readingAvailable === true;
+  // Live scanning sends a photo every few seconds; only do that when a fast
+  // model is behind it, so a slow free server is not swamped.
+  const canAutoScan = canReadPhotos && backend.autoScanAvailable === true;
   const hasText = text.trim().length > 0;
 
   useEffect(() => {
@@ -145,7 +148,7 @@ export default function ScanScreen() {
 
   // Live scanning: one photo every few seconds while this screen is in front.
   useEffect(() => {
-    if (!permission?.granted || !isFocused || !canReadPhotos) return;
+    if (!permission?.granted || !isFocused || !canAutoScan) return;
 
     let cancelled = false;
     let busy = false;
@@ -173,7 +176,7 @@ export default function ScanScreen() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [permission?.granted, isFocused, canReadPhotos, applyScannedText]);
+  }, [permission?.granted, isFocused, canAutoScan, applyScannedText]);
 
   const onManualEdit = (value: string) => {
     setText(value);
@@ -387,7 +390,7 @@ export default function ScanScreen() {
         <View pointerEvents="none" style={styles.hintWrap}>
           <Text style={styles.hint}>
             {reading
-              ? 'Reading the text...'
+              ? 'Reading the text… this can take a moment'
               : canReadPhotos
                 ? 'Hold steady and keep the text clear'
                 : 'Point at the text, then type it below'}
@@ -423,10 +426,12 @@ export default function ScanScreen() {
         visible={viewerOpen}
         onClose={() => setViewerOpen(false)}
         cameraRef={cameraRef}
+        onCapture={canReadPhotos ? takePhoto : undefined}
+        captureLabel="Read the Text"
         hint={
           canReadPhotos
-            ? 'Hold steady and keep the text clear'
-            : 'Read the text, then tap Done and type it below'
+            ? 'Keep the words inside the frame, then tap Read the Text'
+            : 'Read the words, then tap Done and type them below'
         }
       />
     </Screen>
