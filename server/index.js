@@ -44,6 +44,20 @@ function rateLimit(req, res, next) {
 }
 
 // --------------------------------------------------------------------- routes
+app.get('/', (_req, res) => {
+  // Someone opened the bare address in a browser. Say hello instead of 404.
+  res.json({
+    ok: true,
+    service: 'Sanskrit Translator API',
+    translatingWith: activeTranslateEngine() === 'free' ? 'free dictionary (no key)' : config.OPENAI_MODEL,
+    readingPhotos: ocrAvailable(),
+    try: {
+      health: 'GET /api/health',
+      translate: 'POST /api/translate  {"text": "hello world"}',
+    },
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
@@ -68,7 +82,10 @@ app.post('/api/ocr', rateLimit, async (req, res) => {
 });
 
 app.use((_req, res) => {
-  res.status(404).json({ code: 'unknown', error: 'Not found.' });
+  res.status(404).json({
+    code: 'unknown',
+    error: 'Nothing here. Try /api/health, or POST /api/translate with {"text": "..."}.',
+  });
 });
 
 // eslint-disable-next-line no-unused-vars
