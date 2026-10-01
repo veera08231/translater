@@ -247,7 +247,7 @@ async function handleOcr(body) {
       const result = await recognize(image);
       return { status: 200, body: result };
     } catch (error) {
-      const message = String(error && error.message);
+      const message = String((error && error.message) || error);
       const unclear = /no text found/i.test(message);
       return {
         status: unclear ? 422 : 503,
@@ -256,6 +256,8 @@ async function handleOcr(body) {
           error: unclear
             ? 'No text found in that photo. Please try again with better light.'
             : 'Could not read the photo. Please try again.',
+          // Short reason, useful when the server misbehaves.
+          detail: message.slice(0, 160),
         },
       };
     }

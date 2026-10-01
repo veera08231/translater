@@ -25,6 +25,7 @@ const TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS || 150_000);
 
 let workerPromise = null;
 let queue = Promise.resolve();
+let lastError = null;
 
 /** Is the free reader installed? (True when tesseract.js is available.) */
 function freeOcrAvailable() {
@@ -47,6 +48,7 @@ async function getWorker() {
       })
       .catch((error) => {
         workerPromise = null;
+        lastError = String((error && error.message) || error);
         throw error;
       });
   }
@@ -101,4 +103,13 @@ async function recognize(base64) {
   return { rawText: raw.trim(), text, engine: 'tesseract' };
 }
 
-module.exports = { recognize, freeOcrAvailable, warmUp, LANGUAGES };
+module.exports = {
+  recognize,
+  freeOcrAvailable,
+  warmUp,
+  LANGUAGES,
+  /** Ready when the photo reader finished starting up. */
+  isReady: () => Boolean(workerPromise),
+  /** Why the reader is not working, if we know. */
+  lastError: () => lastError,
+};
