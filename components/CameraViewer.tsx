@@ -74,6 +74,7 @@ export function CameraViewer({
           style={StyleSheet.absoluteFill}
           facing="back"
           mode="picture"
+          pictureSize="hd"
           zoom={zoom}
           enableTorch={torch}
         />

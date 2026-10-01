@@ -23,6 +23,12 @@ const LANGUAGES = (process.env.OCR_LANGUAGES || 'eng+hin+tam').split('+').filter
 const CACHE_PATH = process.env.OCR_CACHE_PATH || path.join(os.tmpdir(), 'sanskrit-ocr-cache');
 const TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS || 150_000);
 
+/**
+ * Below this confidence the "words" are noise, not text. Showing them would
+ * fill the screen with rubbish, so we say nothing was found instead.
+ */
+const MIN_CONFIDENCE = Number(process.env.OCR_MIN_CONFIDENCE || 55);
+
 let workerPromise = null;
 let queue = Promise.resolve();
 let lastError = null;
@@ -85,6 +91,14 @@ async function recognize(base64) {
   const run = async () => {
     const worker = await getWorker();
     const { data } = await worker.recognize(buffer);
+
+    // Tesseract often "reads" a blurry frame as random letters. Only trust it
+    // when it is reasonably sure.
+    const confidence = Number(data?.confidence ?? 0);
+    if (confidence < MIN_CONFIDENCE) {
+      throw new Error('no text found');
+    }
+
     return data?.text || '';
   };
 

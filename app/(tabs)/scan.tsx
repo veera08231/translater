@@ -23,6 +23,7 @@ import { readTextFromPhoto } from '@/services/ocr';
 import { AUTO_SCAN_INTERVAL_MS } from '@/constants/config';
 import { isSameOcrText } from '@/utils/cleanOcr';
 import { friendlyErrorMessage } from '@/utils/errors';
+import { devanagariRegular } from '@/utils/fonts';
 import { fontSize, radius, spacing } from '@/utils/theme';
 
 /**
@@ -43,6 +44,8 @@ export default function ScanScreen() {
   const [reading, setReading] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  /** The Sanskrit currently shown on the camera, like a live caption. */
+  const [live, setLive] = useState<string>('');
 
   const lastRead = useRef('');
   const autoScan = useRef(true);
@@ -51,12 +54,16 @@ export default function ScanScreen() {
   const language = useLanguageTag(text);
   const { status, result, error, isLoading, translate } = useTranslation('scanned');
 
+  // Show the newest answer straight on the camera.
+  useEffect(() => {
+    if (result?.sanskrit) setLive(result.sanskrit);
+  }, [result?.sanskrit]);
+
   // What this backend can actually do: null = still asking.
   const readingAvailable = backend.ocrAvailable;
   const canReadPhotos = readingAvailable === true;
-  // Live scanning sends a photo every few seconds; only do that when a fast
-  // model is behind it, so a slow free server is not swamped.
-  const canAutoScan = canReadPhotos && backend.autoScanAvailable === true;
+  // Live scanning works whenever photos can be read, free reader or not.
+  const canAutoScan = canReadPhotos;
   const hasText = text.trim().length > 0;
 
   useEffect(() => {
@@ -157,15 +164,18 @@ export default function ScanScreen() {
       if (cancelled || busy || !autoScan.current || !isActive.current) return;
       busy = true;
       try {
+        // 1280x720 is plenty to read words and keeps the upload small; a full
+        // resolution photo is many megabytes and far too slow to read.
         const photo = await cameraRef.current?.takePictureAsync({
-          quality: 0.35,
+          quality: 0.4,
           base64: true,
         });
         if (cancelled || !photo?.base64) return;
         const ocr = await readTextFromPhoto(photo.base64);
         if (!cancelled) applyScannedText(ocr.text);
       } catch {
-        // Keep scanning quietly. "Take Photo" is always there as a backup.
+        // Blurry or empty frames are normal while moving the phone. Keep quiet
+        // and try again on the next pass.
       } finally {
         busy = false;
       }
@@ -387,6 +397,7 @@ export default function ScanScreen() {
           style={StyleSheet.absoluteFill}
           facing="back"
           mode="picture"
+          pictureSize="hd"
         />
 
         <View pointerEvents="none" style={styles.frameWrap}>
@@ -398,12 +409,23 @@ export default function ScanScreen() {
           <Text style={styles.enlargeText}>Tap to enlarge</Text>
         </View>
 
+        {/* The translation, right on the camera, like a live caption. */}
+        {live ? (
+          <View pointerEvents="none" style={styles.liveWrap}>
+            <View style={styles.liveBox}>
+              <Text style={styles.liveText} numberOfLines={4}>
+                {live}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <View pointerEvents="none" style={styles.hintWrap}>
           <Text style={styles.hint}>
             {reading
               ? 'Reading the text… this can take a moment'
               : canReadPhotos
-                ? 'Hold steady and keep the text clear'
+                ? 'Move slowly over the words — the Sanskrit appears here'
                 : 'Point at the text, then type it below'}
           </Text>
         </View>
@@ -490,6 +512,27 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.9)',
     borderRadius: radius.lg,
+  },
+  liveWrap: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: 58,
+    alignItems: 'center',
+  },
+  liveBox: {
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    maxWidth: '100%',
+  },
+  liveText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    lineHeight: 34,
+    fontFamily: devanagariRegular,
+    textAlign: 'center',
   },
   hintWrap: {
     position: 'absolute',
