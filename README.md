@@ -112,10 +112,20 @@ Scan the QR code with Expo Go. No custom build, no dev client.
 
 ## 3. Point the app at your server
 
-```bash
-copy .env.example .env          # Windows
-# cp .env.example .env           # macOS / Linux
+The server is already deployed and running:
+
 ```
+https://translater-5zmo.onrender.com
+```
+
+`.env` is already filled in with that address, so you can skip this step. If
+you ever move the server, change it in `.env` and restart Metro:
+
+```bash
+EXPO_PUBLIC_API_URL=https://<your-new-address>
+```
+
+Running the server on your own computer instead:
 
 | Where the app runs | `EXPO_PUBLIC_API_URL` |
 | --- | --- |
@@ -125,16 +135,6 @@ copy .env.example .env          # Windows
 
 Find it with `ipconfig` (Windows) or `ifconfig | grep "inet "` (Mac). The phone
 and computer must be on the **same Wi-Fi**. Restart Metro after changing `.env`.
-
-Check the server on its own:
-
-```bash
-curl http://localhost:3001/api/health
-```
-
-```json
-{"ok":true,"translateEngine":"free","ocrAvailable":false,"apiKeyConfigured":false}
-```
 
 ---
 
