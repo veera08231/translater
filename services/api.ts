@@ -56,7 +56,9 @@ export type BackendInfo = {
 export async function getHealth(): Promise<BackendInfo> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
+    // A free server that has been asleep needs time to wake up, so we wait
+    // rather than telling the user straight away that it is unreachable.
+    const timer = setTimeout(() => controller.abort(), 45_000);
     const response = await fetch(`${API_BASE_URL}/api/health`, {
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
