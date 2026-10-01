@@ -200,7 +200,36 @@ cannot promise grammar.
 
 ---
 
-## 7. Test it
+## 7. Build an APK
+
+### Download the ready-made one (v1.0)
+
+**https://github.com/veera08231/translater/releases/download/v1.0/sanskrit-translator.apk**
+
+113 MB. Install it on any Android phone — Expo Go is not needed. Android will ask
+you to allow "install from unknown apps"; that warning is normal for any app that
+is not from the Play Store.
+
+### Build your own
+
+```bash
+npm install -g eas-cli      # once
+eas login                   # once
+npm run configure:android   # once — Android signing credentials
+npm run build:apk           # eas build -p android --profile preview
+```
+
+`eas.json` has three profiles:
+
+| Profile | What you get | Command |
+| --- | --- | --- |
+| `preview` | **APK** you can install on any phone | `npm run build:apk` |
+| `development` | Development build with a launcher | `npm run build:dev` |
+| `production` | Release build for Google Play | `npm run build:release` |
+
+---
+
+## 8. Test it
 
 ```bash
 npm test
@@ -212,7 +241,7 @@ validation, caching and the AI round trip.
 
 ---
 
-## 8. Deploy the server free (Render)
+## 9. Deploy the server free (Render)
 
 ### The short way (recommended)
 
@@ -291,7 +320,7 @@ docker run -p 3001:3001 -e OPENAI_API_KEY=sk-... sanskrit-api
 
 ---
 
-## 9. Project structure
+## 10. Project structure
 
 ```
 app/                        screens (Expo Router)
@@ -323,7 +352,7 @@ api/                        serverless version of the same two endpoints
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | What you see | What to do |
 | --- | --- |
@@ -337,7 +366,7 @@ api/                        serverless version of the same two endpoints
 
 ---
 
-## 11. Good to know
+## 12. Good to know
 
 - **Free answers are word-by-word.** The Sanskrit words are hand-checked and the
   verbs are conjugated, but word order is the original one. Always read the
