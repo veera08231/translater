@@ -11,6 +11,7 @@
     "dev": "node server/index.js",
     "typecheck": "tsc --noEmit",
     "test": "node server/smoke-test.js",
+    "learn:more": "node server/engines/build-lexicon.js --limit 1500",
     "lint": "expo lint",
     "build:apk": "eas build -p android --profile preview",
     "build:dev": "eas build -p android --profile development",

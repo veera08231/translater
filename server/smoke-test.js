@@ -20,7 +20,7 @@ const { handleTranslate, handleOcr } = require('./handlers');
 const { createMockModel } = require('./mock-model');
 const { translateFree } = require('./engines/freeEngine');
 const { translateWithFreeApis, chunkText } = require('./engines/webEngine');
-const { WORDS, VERB_FORMS, PHRASES, NATIVE } = require('./engines/lexicon');
+const { WORDS, VERB_FORMS, PHRASES, NATIVE, GENERATED } = require('./engines/lexicon');
 
 let passed = 0;
 let failed = 0;
@@ -54,6 +54,19 @@ async function main() {
 
   const badVerbs = Object.entries(VERB_FORMS).filter(([, value]) => value.split(',').length !== 5);
   check('every verb has all five persons', badVerbs.length === 0, JSON.stringify(badVerbs.slice(0, 3)));
+
+  console.log('\nWords learned from open data');
+  check('the learned file was loaded', Object.keys(GENERATED).length > 0, String(Object.keys(GENERATED).length));
+  check(
+    'every learned word is in Devanagari',
+    Object.values(GENERATED).every((value) => DEVANAGARI.test(value)),
+    JSON.stringify(Object.entries(GENERATED).filter(([, v]) => !DEVANAGARI.test(v)).slice(0, 3)),
+  );
+  check(
+    'no junk slipped in (keys are plain words)',
+    Object.keys(GENERATED).every((key) => /^[a-z]{2,}$/.test(key)),
+  );
+  check('hand-written entries still win', WORDS.water === 'जलम्' && WORDS.mother === 'माता', `${WORDS.water} / ${WORDS.mother}`);
 
   // --------------------------------------------------------------- free engine
   console.log('\nFree engine (no key, no cost)');

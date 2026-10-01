@@ -163,7 +163,48 @@ const NUMBERS = dict(
     'thousand=सहस्रम्|lakh=लक्षम्|million=दशलक्षम्|half=अर्धम्',
 );
 
-const WORDS = Object.assign({}, PEOPLE, BODY, NATURE, FOOD, THINGS, IDEAS, DESCRIBE, GLUE, NUMBERS);
+/**
+ * Words learned automatically from open data (build-lexicon.js writes this
+ * file). They are applied first so every hand-written entry below still wins.
+ * Anything that is not clean Devanagari is ignored, even if the file is edited
+ * by hand.
+ */
+function loadGenerated() {
+  try {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const file = path.join(__dirname, 'lexicon.generated.json');
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const learned = parsed.words || {};
+
+    const clean = {};
+    for (const [key, value] of Object.entries(learned)) {
+      if (!/^[a-z]{2,}$/.test(key)) continue;
+      if (!/^[\u0900-\u097F\s\u0964\u0965.,!?'"()\-]+$/.test(String(value))) continue;
+      clean[key] = String(value).trim();
+    }
+    return clean;
+  } catch {
+    // No learned file yet — the hand-written dictionary is enough to run.
+    return {};
+  }
+}
+
+const GENERATED = loadGenerated();
+
+const WORDS = Object.assign(
+  {},
+  GENERATED,
+  PEOPLE,
+  BODY,
+  NATURE,
+  FOOD,
+  THINGS,
+  IDEAS,
+  DESCRIBE,
+  GLUE,
+  NUMBERS,
+);
 
 /**
  * Common verbs, conjugated for the person doing the action.
@@ -686,4 +727,4 @@ for (const [key, value] of Object.entries(Object.assign({}, GLUE2, MORE))) {
   WORDS[key] = value;
 }
 
-module.exports = { WORDS, VERB_FORMS, PHRASES, NATIVE, dict };
+module.exports = { WORDS, VERB_FORMS, PHRASES, NATIVE, dict, GENERATED };

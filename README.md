@@ -43,6 +43,30 @@ Malayalam, French, German, Spanish, Portuguese, Italian, Dutch, Turkish,
 Vietnamese, Indonesian, Polish, Russian, Japanese, Chinese, Korean, Arabic,
 Thai, and romanised spellings of the Indian languages.
 
+### The dictionary grows by itself
+
+```bash
+npm run learn:more            # learn 1,500 more words (free, takes a few minutes)
+npm run learn:more -- --probe # look at what it would learn, learn nothing
+```
+
+`server/engines/build-lexicon.js` takes the most common English words from a
+**public frequency list** and asks the **same free services** the app already
+uses for their Devanagari. What passes the checks is written to
+`lexicon.generated.json` and committed, so the server never needs the internet
+for this. It refuses to learn junk:
+
+- the result must be real Devanagari, at most three words long
+- a result that is only the input spelled out in Devanagari is thrown away
+- English function words (`by`, `as`, `of`…) are skipped — they have no single
+  Sanskrit equivalent and come back as nonsense
+- **hand-written entries always win** — learned words only fill the gaps
+
+It learned **419 words** on the last run, taking the dictionary from 558 to **977
+English words**, e.g. `page` → पृष्ठम्, `search` → अन्वेषणम्, `information` →
+सूचना. Review `server/engines/lexicon.generated.json` like any other file —
+delete anything you do not like and commit.
+
 ---
 
 ## 1. What you need
@@ -190,17 +214,41 @@ validation, caching and the AI round trip.
 
 ## 8. Deploy the server free (Render)
 
-`render.yaml` is a ready-made blueprint. **No environment variables to type.**
+### The short way (recommended)
 
-1. Put this project on GitHub.
-2. Render → **New → Blueprint** → pick `veera08231/translater` → **Apply**.
-3. Wait for the build, then open
-   `https://translater-api.onrender.com/api/health`.
-4. Put that address in the app's `.env`:
+Render → **New → Blueprint** → pick `veera08231/translater` → **Apply**.
 
-   ```bash
-   EXPO_PUBLIC_API_URL=https://translater-api.onrender.com
-   ```
+Nothing to type. You get `https://translater-api.onrender.com`.
+
+### If you use "New → Web Service" instead
+
+Render guesses from your root `package.json`, which is the **mobile app**, so it
+fills in the wrong values. Change these five fields:
+
+| Field | Render suggests | Put this |
+| --- | --- | --- |
+| **Root Directory** | *(empty)* | **`server`** |
+| **Start Command** | `node expo-router/entry` | **`node index.js`** |
+| **Build Command** | `npm install` | `npm install --omit=dev` |
+| **Health Check Path** | *(under Advanced)* | `/api/health` |
+| **Instance Type** | Free | Free to start |
+
+Leave **Branch** = `main`, **Region** = Singapore (or Oregon), and leave the
+environment variables empty — the free setup needs none.
+
+Then test it: open `https://translater-api.onrender.com/api/health` and you
+should see
+
+```json
+{"ok":true,"translateEngine":"free","ocrAvailable":false,"apiKeyConfigured":false}
+```
+
+Finally point the app at it:
+
+```bash
+# .env in the project root
+EXPO_PUBLIC_API_URL=https://translater-api.onrender.com
+```
 
 `rootDir: server` means only the three small server packages are installed —
 seconds, not the whole Expo dependency tree.
@@ -212,6 +260,8 @@ seconds, not the whole Expo dependency tree.
 - `plan: free` → `plan: starter` in `render.yaml` for an always-on instance.
 - The in-memory cache resets when the instance restarts; the phone's own cache
   is what guarantees identical answers for you.
+- **There is no login anywhere** — not in the app, not on Render beyond your own
+  account, and no user accounts are created.
 - `region: singapore` is set for India. Others: `oregon`, `ohio`, `virginia`,
   `frankfurt`.
 

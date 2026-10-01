@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node smoke-test.js"
+    "test": "node smoke-test.js",
+    "build:lexicon": "node engines/build-lexicon.js",
+    "build:lexicon:more": "node engines/build-lexicon.js --limit 1500"
   },
   "dependencies": {
     "cors": "^2.8.5",
