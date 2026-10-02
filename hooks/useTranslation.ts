@@ -15,6 +15,7 @@ const INITIAL: TranslateState = { status: 'idle' };
 
 export function useTranslation(source: TranslationSource = 'typed') {
   const [state, setState] = useState<TranslateState>(INITIAL);
+  const [slow, setSlow] = useState(false);
   const requestId = useRef(0);
 
   const translate = useCallback(
@@ -29,6 +30,11 @@ export function useTranslation(source: TranslationSource = 'typed') {
       requestId.current = id;
       setState({ status: 'loading' });
 
+      // A free hosting service sleeps, so the first answer can take a while.
+      // Say so, instead of looking frozen.
+      setSlow(false);
+      const slowTimer = setTimeout(() => setSlow(true), 3_000);
+
       try {
         const result = await translateText(text, source);
         if (requestId.current !== id) return; // a newer request won
@@ -39,6 +45,9 @@ export function useTranslation(source: TranslationSource = 'typed') {
         if (requestId.current !== id) return;
         setState({ status: 'error', error: friendlyErrorMessage(error) });
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        clearTimeout(slowTimer);
+        setSlow(false);
       }
     },
     [source],
@@ -54,6 +63,8 @@ export function useTranslation(source: TranslationSource = 'typed') {
     result: state.result,
     error: state.error,
     isLoading: state.status === 'loading',
+    /** True when the answer is taking a while (the server may be waking). */
+    slow,
     translate,
     reset,
   };

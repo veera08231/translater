@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
 
 import { BigButton } from '@/components/BigButton';
 import { LoadingBlock } from '@/components/LoadingBlock';
@@ -12,7 +12,7 @@ import { TextArea } from '@/components/TextArea';
 import { useBackendInfo } from '@/hooks/useBackendInfo';
 import { useLanguageTag } from '@/hooks/useLanguageTag';
 import { useTranslation } from '@/hooks/useTranslation';
-import { spacing } from '@/utils/theme';
+import { spacing, fontSize } from '@/utils/theme';
 
 /**
  * Screen 1 — Type.
@@ -22,12 +22,28 @@ export default function TypeScreen() {
   const [text, setText] = useState('');
   const backend = useBackendInfo();
   const language = useLanguageTag(text);
-  const { status, result, error, isLoading, translate } = useTranslation('typed');
+  const { status, result, error, isLoading, slow, translate } = useTranslation('typed');
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onTranslate = () => {
     Keyboard.dismiss();
     void translate(text);
   };
+
+  // Translate by itself a moment after the user stops typing, so nothing has
+  // to be pressed.
+  useEffect(() => {
+    if (!text.trim()) return undefined;
+
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(() => {
+      void translate(text);
+    }, 900);
+
+    return () => {
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+    };
+  }, [text, translate]);
 
   return (
     <Screen>
@@ -57,6 +73,10 @@ export default function TypeScreen() {
         </View>
       ) : null}
 
+      {text.trim().length > 0 && status === 'idle' ? (
+        <Text style={styles.hint}>The Sanskrit appears on its own — or tap Translate.</Text>
+      ) : null}
+
       <BigButton
         label="Translate"
         icon="language"
@@ -74,7 +94,7 @@ export default function TypeScreen() {
 
       {isLoading ? (
         <View style={styles.gap}>
-          <LoadingBlock label="Translating..." />
+          <LoadingBlock label={slow ? 'Waking up the translator…' : 'Translating…'} />
         </View>
       ) : null}
 
@@ -90,4 +110,12 @@ export default function TypeScreen() {
 const styles = StyleSheet.create({
   tagRow: { marginTop: spacing.md, marginBottom: spacing.lg },
   gap: { marginTop: spacing.lg },
+  hint: {
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    fontSize: fontSize.meta,
+    fontWeight: '600',
+    textAlign: 'center',
+    opacity: 0.7,
+  },
 });

@@ -52,7 +52,7 @@ export default function ScanScreen() {
   const isActive = useRef(AppState.currentState === 'active');
 
   const language = useLanguageTag(text);
-  const { status, result, error, isLoading, translate } = useTranslation('scanned');
+  const { status, result, error, isLoading, slow, translate } = useTranslation('scanned');
 
   // Show the newest answer straight on the camera.
   useEffect(() => {
@@ -240,7 +240,11 @@ export default function ScanScreen() {
           />
         ) : null}
 
-        {isLoading ? <LoadingBlock label="Translating..." /> : null}
+        {isLoading ? (
+          <LoadingBlock
+            label={slow ? 'Reading the photo — the first one is slower…' : 'Reading the text…'}
+          />
+        ) : null}
 
         {status === 'done' && result ? <ResultCard result={result} /> : null}
       </View>
