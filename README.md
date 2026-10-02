@@ -372,13 +372,56 @@ api/                        serverless version of the same two endpoints
 
 ---
 
-## 11. Troubleshooting
+## 11. Make the app answer instantly
+
+The server itself answers in **1–2 seconds**. The only slow moment is the first
+request after the free hosting service has gone to sleep (after ~15 minutes of
+nobody using it) — then it needs 20–40 seconds to wake up. The app says
+*"Waking up the translator…"* while that happens.
+
+### Free fix: keep it awake
+
+1. Create a free account at **uptimerobot.com**
+2. **Add New Monitor** → type *HTTP(s)*
+3. URL: `https://translater-5zmo.onrender.com/api/health`
+4. Monitoring interval: **5 minutes**
+5. Create
+
+The free plan allows 50 monitors at a 5-minute interval, and the server never
+sleeps again. Users get an instant answer every time.
+
+### Alternative: Google Cloud Run (free, ~1 second wake-up)
+
+Cloud Run also sleeps, but it starts again in about a second, and its free tier
+is generous (2 million requests a month):
+
+```bash
+gcloud run deploy sanskrit-api \
+  --source server \
+  --region asia-south1 \
+  --allow-unauthenticated \
+  --min-instances 0
+```
+
+Then put the new address in `.env`:
+
+```bash
+EXPO_PUBLIC_API_URL=https://<the-address-gcloud-gives-you>
+```
+
+### Or skip the waiting entirely
+
+`plan: starter` on Render ($7/month, cancel any time) never sleeps.
+
+---
+
+## 12. Troubleshooting
 
 | What you see | What to do |
 | --- | --- |
 | "No internet. Please connect and try again." | The phone cannot reach the server. Same Wi-Fi? Is `EXPO_PUBLIC_API_URL` your computer's IP rather than `localhost`? |
 | "Reading text from photos is not available here." | Expected in the free setup — type the text instead. Add an `OPENAI_API_KEY` on the server to turn it on. |
-| "This is taking too long. Please try again." | A free Render instance was asleep; press **Try again**. |
+| "This is taking too long. Please try again." | A free server was asleep — press **Try again**. Add the free keep-alive monitor (section 11) so it never sleeps again. |
 | The server prints `Photo text : no` | Correct — no vision model configured. |
 | Some words are left untranslated | The dictionary did not know them and no online service answered. They are shown as-is on purpose rather than guessed. |
 | Sanskrit letters look wrong | Restart Expo with `npx expo start --clear`. |
@@ -386,7 +429,7 @@ api/                        serverless version of the same two endpoints
 
 ---
 
-## 12. Good to know
+## 13. Good to know
 
 - **Free answers are word-by-word.** The Sanskrit words are hand-checked and the
   verbs are conjugated, but word order is the original one. Always read the
