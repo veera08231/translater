@@ -2,6 +2,8 @@
  * Turns low-level failures into messages a normal person can act on.
  */
 
+import { API_BASE_URL } from '@/constants/config';
+
 export type ApiErrorCode =
   | 'offline'
   | 'timeout'
@@ -26,8 +28,13 @@ export class ApiError extends Error {
   }
 }
 
+function hostOf(url: string): string {
+  const match = /https?:\/\/([^/]+)/.exec(url);
+  return match ? match[1] : url;
+}
+
 const MESSAGES: Record<ApiErrorCode, string> = {
-  offline: 'No internet. Please connect and try again.',
+  offline: `Cannot reach the translator at ${hostOf(API_BASE_URL)}. Check your internet and try again.`,
   timeout: 'This is taking too long. Please try again.',
   too_many: 'Too many requests. Please wait a moment and try again.',
   empty: 'No text found. Please type or scan some text.',

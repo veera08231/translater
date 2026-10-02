@@ -47,7 +47,11 @@ export type BackendInfo = {
   /** Live scanning while pointing — only with a fast model behind it. */
   autoScanAvailable?: boolean;
   apiKeyConfigured?: boolean;
+  /** Which server the app is talking to, shown in error messages. */
+  host: string;
 };
+
+const HOST = /https?:\/\/([^/]+)/.exec(API_BASE_URL)?.[1] ?? API_BASE_URL;
 
 /**
  * Asks the backend what it can do (free / photo reading), so the app never
@@ -64,11 +68,16 @@ export async function getHealth(): Promise<BackendInfo> {
     }).finally(() => clearTimeout(timer));
 
     if (!response.ok) throw new Error('offline');
-    return (await response.json()) as BackendInfo;
+    return { ...((await response.json()) as BackendInfo), host: HOST };
   } catch {
-    // Assume nothing is available until the backend says otherwise, so the app
-    // never offers a button that cannot work.
-    return { ok: false, translateEngine: 'free', ocrAvailable: false };
+    // Say what we could not reach, so the message can name the server.
+    return {
+      ok: false,
+      translateEngine: 'free',
+      ocrAvailable: false,
+      autoScanAvailable: false,
+      host: HOST,
+    };
   }
 }
 

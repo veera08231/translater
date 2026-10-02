@@ -33,11 +33,11 @@ export default function TypeScreen() {
     <Screen>
       <ScreenTitle title="Type" helper="Type or paste text in any language" />
 
-      {!backend.ok ? (
+      {backend.ocrAvailable === false && !backend.ok ? (
         <View style={styles.gap}>
           <NoticeBanner
             tone="error"
-            message="Cannot reach the translator. Check your internet and try again."
+            message={`Cannot reach the translator at ${backend.host}. Check your internet.`}
             onRetry={backend.refresh}
             retryLabel="Try again"
           />

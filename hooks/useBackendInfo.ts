@@ -14,6 +14,7 @@ const PENDING: BackendInfo = {
   ok: false,
   translateEngine: 'free',
   ocrAvailable: null,
+  host: '',
 };
 
 let stored: BackendInfo | null = null;
